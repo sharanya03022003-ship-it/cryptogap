@@ -607,10 +607,21 @@ def scan_thread():
     loop.run_until_complete(run_scan())
 
 
-ACCESS_KEYS = {
-    'demo2026',
-    'cryptogap_pro_001',
+BASIC_KEYS = {
+    'CG-BASIC-001',
+    'CG-BASIC-002',
+    'CG-BASIC-003',
+    'CG-BASIC-004',
+    'CG-BASIC-005',
 }
+
+PRO_KEYS = {
+    'CG-PRO-001',
+    'CG-PRO-002',
+    'CG-PRO-003',
+}
+
+ACCESS_KEYS = BASIC_KEYS | PRO_KEYS | {'demo2026'}
 
 LOGIN_PAGE = '''
 <!DOCTYPE html><html><head><title>CryptoGap</title>
@@ -642,7 +653,11 @@ button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(46,160,67,0.4
 <button type="submit">Access Dashboard</button>
 </form>
 <p class="err" id="err">Invalid key</p>
-<p style="margin-top:16px;font-size:0.75rem">Get your key at <b>gumroad.com</b></p>
+<div style="margin-top:20px;font-size:0.72rem;color:#8b949e;line-height:1.8;text-align:left;padding:12px;background:#0d1117;border-radius:8px">
+<b style="color:#e0e0e0">Plans:</b><br>
+<span style="color:#3fb950">Basic $29/mo</span> — Dashboard + unlimited scans<br>
+<span style="color:#f0883e">Pro $99/mo</span> — Everything + Telegram alerts<br>
+</div>
 </div>
 <script>if(location.search.includes('err'))document.getElementById('err').style.display='block'</script>
 </body></html>
