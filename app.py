@@ -417,9 +417,6 @@ def find_arbitrage(all_tickers, all_currencies):
     coin_prices = {}
 
     for exchange_id, tickers in all_tickers.items():
-        if exchange_id not in TRUSTED_EXCHANGES:
-            continue
-
         for symbol, ticker in tickers.items():
             if not ticker or not isinstance(ticker, dict):
                 continue
@@ -519,6 +516,7 @@ def find_arbitrage(all_tickers, all_currencies):
             'sell_url': get_trade_url(most_expensive['exchange'], coin_code) or '',
             'num_exchanges': len(filtered),
             'all_prices': price_map[:10],
+            'trusted': cheapest['exchange'] in TRUSTED_EXCHANGES and most_expensive['exchange'] in TRUSTED_EXCHANGES,
         })
 
     opportunities.sort(key=lambda x: x['profit_pct'], reverse=True)
@@ -571,8 +569,8 @@ async def run_scan():
         elif cg_result == 'CG_PARTIAL':
             o['verify'] = 'CG_PARTIAL'
 
-    # Filter: only keep CG_VERIFIED or CONTRACT VERIFIED
-    unique_opps = [o for o in unique_opps if o.get('verify') in ('CG_VERIFIED', 'VERIFIED')]
+    verified_opps = [o for o in unique_opps if o.get('verify') in ('CG_VERIFIED', 'VERIFIED')]
+    all_opps = unique_opps
 
     # Funding rate scan
     funding_opps = await scan_funding()
@@ -586,7 +584,8 @@ async def run_scan():
     }
 
     total_scan_time = time.time() - start
-    scan_data['opportunities'] = unique_opps[:200]
+    scan_data['opportunities'] = verified_opps[:200]
+    scan_data['all_opportunities'] = all_opps[:500]
     scan_data['last_scan'] = time.strftime('%Y-%m-%d %H:%M:%S')
     scan_data['scanning'] = False
     scan_data['stats'] = {
@@ -681,7 +680,10 @@ def login_required(f):
 @app.route('/')
 @login_required
 def index():
-    return render_template_string(DASHBOARD_HTML)
+    import os
+    html_path = os.path.join(os.path.dirname(__file__), 'dashboard.html')
+    with open(html_path, 'r') as f:
+        return f.read()
 
 
 @app.route('/login', methods=['GET'])

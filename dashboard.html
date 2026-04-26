@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoGap</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#050510;--card:#0a0f1a;--border:#0f1a2e;--accent:#00f0ff;--accent2:#7b2ff7;--green:#00ff88;--red:#ff3366;--yellow:#ffd700;--text:#c8d6e5;--dim:#4a5568}
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+.bg-grid{position:fixed;top:0;left:0;width:100%;height:100%;background-image:linear-gradient(rgba(0,240,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,0.03) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;z-index:0}
+.bg-glow{position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(123,47,247,0.08) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(0,240,255,0.06) 0%,transparent 50%);pointer-events:none;z-index:0}
+
+.app{position:relative;z-index:1}
+
+.header{padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:rgba(10,15,26,0.8);backdrop-filter:blur(20px)}
+.logo{font-family:'Orbitron',sans-serif;font-size:1.3rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo sub{font-size:0.5rem;color:var(--dim);-webkit-text-fill-color:var(--dim);vertical-align:bottom}
+.header-right{display:flex;align-items:center;gap:12px}
+.scan-btn{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#000;border:none;padding:10px 28px;border-radius:20px;cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;transition:all 0.3s;position:relative;overflow:hidden}
+.scan-btn:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(0,240,255,0.4)}
+.scan-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.scan-btn::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(transparent,rgba(255,255,255,0.1),transparent);transform:rotate(45deg);transition:0.5s}
+.scan-btn:hover::after{left:100%}
+.last-scan{color:var(--dim);font-size:0.65rem}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 2s infinite;margin-right:4px}
+
+.progress-bar{width:100%;height:2px;background:var(--border)}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width 0.3s;box-shadow:0 0 10px var(--accent)}
+
+.tabs{display:flex;padding:12px 24px 0;gap:4px}
+.tab{padding:10px 20px;background:transparent;border:1px solid transparent;border-bottom:none;color:var(--dim);cursor:pointer;font-family:'Orbitron',sans-serif;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;transition:all 0.3s;border-radius:8px 8px 0 0}
+.tab.active{color:var(--accent);border-color:var(--border);background:var(--card);box-shadow:0 -2px 20px rgba(0,240,255,0.1)}
+.tab:hover{color:var(--accent)}
+.tab-funding.active{color:var(--yellow);box-shadow:0 -2px 20px rgba(255,215,0,0.1)}
+
+.mode-toggle{display:flex;padding:8px 24px;gap:8px;align-items:center}
+.mode-btn{padding:6px 16px;border-radius:16px;font-size:0.65rem;font-weight:700;cursor:pointer;transition:all 0.3s;border:1px solid var(--border);background:transparent;color:var(--dim);font-family:inherit;text-transform:uppercase;letter-spacing:1px}
+.mode-btn.active{background:var(--accent);color:#000;border-color:var(--accent);box-shadow:0 0 15px rgba(0,240,255,0.3)}
+.mode-btn.risk{border-color:var(--red)}
+.mode-btn.risk.active{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 15px rgba(255,51,102,0.3)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding:12px 24px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.stat-val{font-family:'Orbitron',sans-serif;font-size:1.5rem;font-weight:900;margin-bottom:2px}
+.stat-label{font-size:0.55rem;color:var(--dim);text-transform:uppercase;letter-spacing:2px}
+.green{color:var(--green)} .cyan{color:var(--accent)} .purple{color:var(--accent2)} .yellow{color:var(--yellow)} .red{color:var(--red)}
+
+.filters{padding:8px 24px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filter-input{background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:8px;font-family:inherit;font-size:0.75rem;transition:border 0.3s}
+.filter-input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 10px rgba(0,240,255,0.1)}
+.filter-label{color:var(--dim);font-size:0.6rem;text-transform:uppercase;letter-spacing:1px}
+
+.table-wrap{padding:0 24px 24px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:0.75rem}
+thead th{background:var(--card);color:var(--dim);padding:10px 8px;text-align:left;font-size:0.55rem;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid var(--border);position:sticky;top:0;cursor:pointer;transition:color 0.3s;white-space:nowrap}
+thead th:hover{color:var(--accent)}
+tbody tr{border-bottom:1px solid rgba(15,26,46,0.5);transition:all 0.2s}
+tbody tr:hover{background:rgba(0,240,255,0.03);box-shadow:inset 0 0 30px rgba(0,240,255,0.02)}
+tbody tr.blocked{opacity:0.35}
+td{padding:8px;white-space:nowrap}
+td.price{text-align:right;font-variant-numeric:tabular-nums}
+
+.tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.6rem;font-weight:700;letter-spacing:0.5px}
+.buy-tag{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.2)}
+.sell-tag{background:rgba(255,51,102,0.1);color:var(--red);border:1px solid rgba(255,51,102,0.2)}
+.coin-name{font-weight:700;color:var(--accent);font-size:0.8rem}
+.arrow{color:var(--dim);font-size:0.7rem}
+
+.verify-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.v-verified{background:rgba(0,255,136,0.15);color:var(--green);border:1px solid rgba(0,255,136,0.3)}
+.v-name{background:rgba(255,215,0,0.1);color:var(--yellow);border:1px solid rgba(255,215,0,0.2)}
+.v-unknown{background:rgba(74,85,104,0.2);color:var(--dim);border:1px solid rgba(74,85,104,0.3)}
+.v-fake{background:rgba(255,51,102,0.15);color:var(--red);border:1px solid rgba(255,51,102,0.3)}
+
+.status-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.55rem;font-weight:700;text-transform:uppercase}
+.s-ready{background:rgba(0,255,136,0.12);color:var(--green)}
+.s-blocked{background:rgba(255,51,102,0.1);color:var(--red)}
+.s-warning{background:rgba(255,215,0,0.1);color:var(--yellow)}
+
+.net-tag{font-size:0.6rem;color:var(--accent);background:rgba(0,240,255,0.08);padding:2px 8px;border-radius:4px;border:1px solid rgba(0,240,255,0.15)}
+.fee-info{font-size:0.5rem;color:var(--dim);display:block;margin-top:2px}
+.name-sub{font-size:0.55rem;color:var(--dim);display:block;margin-top:1px}
+.trusted-badge{font-size:0.5rem;padding:1px 6px;border-radius:3px;background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.2)}
+.untrusted-badge{font-size:0.5rem;padding:1px 6px;border-radius:3px;background:rgba(255,51,102,0.1);color:var(--red);border:1px solid rgba(255,51,102,0.2)}
+
+.profit-bar{width:60px;height:4px;background:rgba(74,85,104,0.3);border-radius:2px;display:inline-block;vertical-align:middle;margin-left:6px;overflow:hidden}
+.profit-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent2),var(--green))}
+
+.empty{text-align:center;padding:60px;color:var(--dim)}
+.empty h2{font-family:'Orbitron',sans-serif;font-size:1rem;margin-bottom:8px;color:var(--accent)}
+.empty p{font-size:0.75rem}
+
+.scanner-anim{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:0;display:none}
+.scanner-anim.active{display:block}
+.scanner-ring{width:300px;height:300px;border:1px solid rgba(0,240,255,0.1);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);animation:scanRing 3s linear infinite}
+.scanner-ring:nth-child(2){width:200px;height:200px;animation-delay:1s;border-color:rgba(123,47,247,0.1)}
+.scanner-ring:nth-child(3){width:100px;height:100px;animation-delay:2s;border-color:rgba(0,255,136,0.1)}
+
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 4px var(--green)}50%{opacity:0.4;box-shadow:0 0 8px var(--green)}}
+@keyframes scanRing{0%{transform:translate(-50%,-50%) scale(0.5) rotate(0deg);opacity:0.8}100%{transform:translate(-50%,-50%) scale(2) rotate(360deg);opacity:0}}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.funding-rate{color:var(--yellow);font-weight:700;font-family:'Orbitron',sans-serif;font-size:0.75rem}
+.money-green{color:var(--green);font-weight:700;font-family:'Orbitron',sans-serif}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="scanner-anim" id="scannerAnim"><div class="scanner-ring"></div><div class="scanner-ring"></div><div class="scanner-ring"></div></div>
+
+<div class="app">
+<div class="header">
+    <div class="logo">CRYPTOGAP <sub>v2.0</sub></div>
+    <div class="header-right">
+        <span class="last-scan" id="lastScan"><span class="live-dot"></span>Awaiting scan</span>
+        <button class="scan-btn" id="scanBtn" onclick="startScan()">SCAN ALL</button>
+        <a href="/logout" style="color:var(--dim);font-size:0.6rem;text-decoration:none">Logout</a>
+    </div>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progressBar" style="width:0%"></div></div>
+
+<div class="tabs">
+    <div class="tab active" onclick="switchTab('arb')" id="tabArb">Spot Arbitrage</div>
+    <div class="tab tab-funding" onclick="switchTab('funding')" id="tabFunding">Funding Rate</div>
+</div>
+
+<!-- ARBITRAGE SECTION -->
+<div id="arbSection">
+<div class="mode-toggle">
+    <button class="mode-btn active" id="modeVerified" onclick="setMode('verified')">Verified Only</button>
+    <button class="mode-btn risk" id="modeAll" onclick="setMode('all')">All Tokens (Risk)</button>
+</div>
+
+<div class="stats" id="arbStats">
+    <div class="stat"><div class="stat-val green" id="sOpps">--</div><div class="stat-label">Signals</div></div>
+    <div class="stat"><div class="stat-val cyan" id="sBest">--</div><div class="stat-label">Top Profit</div></div>
+    <div class="stat"><div class="stat-val purple" id="sAvg">--</div><div class="stat-label">Avg Profit</div></div>
+    <div class="stat"><div class="stat-val yellow" id="sExch">--</div><div class="stat-label">Exchanges</div></div>
+    <div class="stat"><div class="stat-val cyan" id="sCoins">--</div><div class="stat-label">Coins</div></div>
+    <div class="stat"><div class="stat-val" id="sTime">--</div><div class="stat-label">Scan Time</div></div>
+</div>
+
+<div class="filters">
+    <span class="filter-label">Min %</span>
+    <input type="number" class="filter-input" id="fMin" value="0.1" step="0.1" style="width:70px" onchange="applyFilters()">
+    <span class="filter-label">Coin</span>
+    <input type="text" class="filter-input" id="fCoin" placeholder="BTC" style="width:80px" oninput="applyFilters()">
+    <span class="filter-label">Exchange</span>
+    <input type="text" class="filter-input" id="fExch" placeholder="binance" style="width:100px" oninput="applyFilters()">
+    <span class="filter-label">Status</span>
+    <select class="filter-input" id="fStatus" onchange="applyFilters()">
+        <option value="all">All</option>
+        <option value="READY">Ready</option>
+        <option value="blocked">Blocked</option>
+    </select>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead><tr>
+    <th>#</th><th>Coin</th><th>Buy On</th><th>Buy Price</th><th></th><th>Sell On</th><th>Sell Price</th><th>Profit</th><th>Verified</th><th>Status</th><th>Net</th><th>Check</th>
+</tr></thead>
+<tbody id="arbBody">
+    <tr><td colspan="12" class="empty"><h2>INITIATE SCAN</h2><p>Scanning 80+ exchanges with CoinGecko verification</p></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- FUNDING SECTION -->
+<div id="fundingSection" style="display:none">
+<div class="stats" id="fundingStats">
+    <div class="stat"><div class="stat-val green" id="fBestDaily">--</div><div class="stat-label">Best $/Day ($5K)</div></div>
+    <div class="stat"><div class="stat-val yellow" id="fBestCoin">--</div><div class="stat-label">Top Coin</div></div>
+    <div class="stat"><div class="stat-val cyan" id="fBestAnnual">--</div><div class="stat-label">Best APR</div></div>
+    <div class="stat"><div class="stat-val purple" id="fTotal">--</div><div class="stat-label">Coins Found</div></div>
+</div>
+<div class="table-wrap">
+<table>
+<thead><tr>
+    <th>#</th><th>Coin</th><th>Exchange</th><th>Rate / 8h</th><th>Daily %</th><th>Annual %</th><th>$/Day ($5K)</th><th>$/Month ($5K)</th>
+</tr></thead>
+<tbody id="fundingBody">
+    <tr><td colspan="8" class="empty"><h2>INITIATE SCAN</h2><p>Funding rates from Binance, Bybit, OKX, Bitget, Gate, MEXC, HTX</p></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+</div><!-- app -->
+
+<script>
+let verifiedData=[], allOppsData=[], fundingData=[];
+let currentMode='verified';
+let sort={key:'profit_pct',dir:'desc'};
+
+function switchTab(t){
+    document.getElementById('arbSection').style.display=t==='arb'?'block':'none';
+    document.getElementById('fundingSection').style.display=t==='funding'?'block':'none';
+    document.getElementById('tabArb').classList.toggle('active',t==='arb');
+    document.getElementById('tabFunding').classList.toggle('active',t==='funding');
+}
+
+function setMode(m){
+    currentMode=m;
+    document.getElementById('modeVerified').classList.toggle('active',m==='verified');
+    document.getElementById('modeAll').classList.toggle('active',m==='all');
+    applyFilters();
+}
+
+async function startScan(){
+    const b=document.getElementById('scanBtn');
+    b.disabled=true;b.textContent='SCANNING...';
+    document.getElementById('scannerAnim').classList.add('active');
+    await fetch('/api/scan',{method:'POST'});
+}
+
+function fmt(p){
+    if(p>=1000)return '$'+p.toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(p>=1)return '$'+p.toFixed(4);
+    if(p>=0.001)return '$'+p.toFixed(6);
+    return '$'+p.toFixed(8);
+}
+
+function profitCls(p){return p>=5?'green':p>=1?'yellow':''}
+function verifyTag(v){
+    const m={CG_VERIFIED:'COINGECKO',VERIFIED:'CONTRACT',NAME_MATCH:'NAME',UNKNOWN:'UNVERIFIED',FAKE:'FAKE',CG_NOT_FOUND:'NOT FOUND',CG_PARTIAL:'PARTIAL'};
+    const c=v==='CG_VERIFIED'||v==='VERIFIED'?'v-verified':v==='NAME_MATCH'?'v-name':v==='FAKE'||v==='CG_NOT_FOUND'?'v-fake':'v-unknown';
+    return `<span class="verify-tag ${c}">${m[v]||v}</span>`;
+}
+function statusTag(s){
+    const m={READY:'READY',NO_WITHDRAW:'NO WITHDRAW',NO_DEPOSIT:'NO DEPOSIT',NO_COMMON_NET:'NO NETWORK',NAME_MISMATCH:'DIFF NAME',FAKE_TOKEN:'FAKE'};
+    const c=s==='READY'?'s-ready':s.includes('NO')?'s-blocked':'s-warning';
+    return `<span class="status-tag ${c}">${m[s]||s}</span>`;
+}
+
+function renderArb(data){
+    const tb=document.getElementById('arbBody');
+    if(!data.length){tb.innerHTML='<tr><td colspan="12" class="empty"><h2>NO SIGNALS</h2><p>Adjust filters or switch to All Tokens mode</p></td></tr>';return}
+    const mx=Math.max(...data.map(d=>d.profit_pct));
+    tb.innerHTML=data.slice(0,100).map((o,i)=>{
+        const bw=Math.min(100,(o.profit_pct/mx)*100);
+        const bl=o.status!=='READY'?'blocked':'';
+        const nm=o.buy_name&&o.buy_name!==o.coin?`<span class="name-sub">${o.buy_name}</span>`:'';
+        const tb2=o.trusted?'<span class="trusted-badge">TRUSTED</span>':'<span class="untrusted-badge">RISKY</span>';
+        return `<tr class="${bl}" style="animation:slideIn 0.3s ease ${i*0.02}s both">
+            <td style="color:var(--dim)">${i+1}</td>
+            <td><span class="coin-name">${o.coin}</span>${nm}<br>${tb2}</td>
+            <td>${o.buy_url?`<a href="${o.buy_url}" target="_blank" style="text-decoration:none"><span class="tag buy-tag">${o.buy_exchange}</span></a>`:`<span class="tag buy-tag">${o.buy_exchange}</span>`}</td>
+            <td class="price">${fmt(o.buy_price)}</td>
+            <td class="arrow">&rarr;</td>
+            <td>${o.sell_url?`<a href="${o.sell_url}" target="_blank" style="text-decoration:none"><span class="tag sell-tag">${o.sell_exchange}</span></a>`:`<span class="tag sell-tag">${o.sell_exchange}</span>`}</td>
+            <td class="price">${fmt(o.sell_price)}</td>
+            <td class="price ${profitCls(o.profit_pct)}" style="font-weight:700;font-family:'Orbitron',sans-serif;font-size:0.75rem">${o.profit_pct.toFixed(2)}%<div class="profit-bar"><div class="profit-fill" style="width:${bw}%"></div></div></td>
+            <td>${verifyTag(o.verify||'UNKNOWN')}</td>
+            <td>${statusTag(o.status)}</td>
+            <td>${o.network!=='-'?`<span class="net-tag">${o.network}</span>${o.withdraw_fee?`<span class="fee-info">~$${o.withdraw_fee}</span>`:''}`:'-'}</td>
+            <td><a href="https://www.coingecko.com/en/coins/${(o.buy_name||o.coin).toLowerCase().replace(/\\s+/g,'-')}" target="_blank" style="color:var(--accent);font-size:0.6rem;text-decoration:none">CoinGecko</a></td>
+        </tr>`;
+    }).join('');
+}
+
+function renderFunding(data){
+    const tb=document.getElementById('fundingBody');
+    if(!data.length){tb.innerHTML='<tr><td colspan="8" class="empty"><h2>NO DATA</h2></td></tr>';return}
+    tb.innerHTML=data.slice(0,50).map((o,i)=>`<tr style="animation:slideIn 0.3s ease ${i*0.02}s both">
+        <td style="color:var(--dim)">${i+1}</td>
+        <td class="coin-name">${o.coin}</td>
+        <td><span class="tag buy-tag">${o.exchange}</span></td>
+        <td class="funding-rate">${o.funding_rate}%</td>
+        <td class="price" style="color:var(--yellow)">${o.daily_pct}%</td>
+        <td class="price" style="color:var(--accent)">${o.annual_pct}%</td>
+        <td class="money-green">$${o.daily_5k}</td>
+        <td class="money-green" style="font-size:0.85rem">$${o.monthly_5k}</td>
+    </tr>`).join('');
+}
+
+function applyFilters(){
+    const src=currentMode==='verified'?verifiedData:allOppsData;
+    const minP=parseFloat(document.getElementById('fMin').value)||0;
+    const coin=document.getElementById('fCoin').value.toUpperCase();
+    const exch=document.getElementById('fExch').value.toLowerCase();
+    const stat=document.getElementById('fStatus').value;
+    let f=src.filter(o=>{
+        if(o.profit_pct<minP)return false;
+        if(coin&&!o.coin.includes(coin))return false;
+        if(exch&&!o.buy_exchange.includes(exch)&&!o.sell_exchange.includes(exch))return false;
+        if(stat==='READY'&&o.status!=='READY')return false;
+        if(stat==='blocked'&&o.status==='READY')return false;
+        return true;
+    });
+    f.sort((a,b)=>{
+        let va=a[sort.key],vb=b[sort.key];
+        if(typeof va==='string'){va=va.toLowerCase();vb=vb.toLowerCase()}
+        return sort.dir==='asc'?(va>vb?1:-1):(va<vb?1:-1);
+    });
+    renderArb(f);
+    const s=document.getElementById.bind(document);
+    s('sOpps').textContent=f.length;
+    s('sBest').textContent=f.length?f[0].profit_pct+'%':'--';
+}
+
+document.querySelectorAll('thead th').forEach((th,i)=>{
+    th.onclick=()=>{
+        const keys=['','coin','buy_exchange','buy_price','','sell_exchange','sell_price','profit_pct','verify','status','network',''];
+        if(keys[i]){
+            if(sort.key===keys[i])sort.dir=sort.dir==='desc'?'asc':'desc';
+            else sort={key:keys[i],dir:'desc'};
+            applyFilters();
+        }
+    };
+});
+
+async function poll(){
+    try{
+        const r=await fetch('/api/data');
+        const d=await r.json();
+        if(d.scanning){
+            const p=d.exchanges_total?(d.scan_progress/d.exchanges_total*100):0;
+            document.getElementById('progressBar').style.width=p+'%';
+            document.getElementById('scanBtn').textContent=`SCANNING ${d.scan_progress}/${d.exchanges_total}`;
+            document.getElementById('scanBtn').disabled=true;
+            document.getElementById('scannerAnim').classList.add('active');
+        }else{
+            document.getElementById('progressBar').style.width='0%';
+            document.getElementById('scanBtn').textContent='SCAN ALL';
+            document.getElementById('scanBtn').disabled=false;
+            document.getElementById('scannerAnim').classList.remove('active');
+        }
+        if(d.last_scan)document.getElementById('lastScan').innerHTML=`<span class="live-dot"></span>${d.last_scan}`;
+        if(d.stats&&d.stats.total_opportunities!==undefined){
+            const s=d.stats;
+            document.getElementById('sExch').textContent=s.exchanges_scanned+'/'+s.exchanges_total;
+            document.getElementById('sCoins').textContent=s.unique_coins;
+            document.getElementById('sTime').textContent=s.scan_time+'s';
+            document.getElementById('sAvg').textContent=s.avg_profit+'%';
+        }
+        if(d.opportunities)verifiedData=d.opportunities;
+        if(d.all_opportunities)allOppsData=d.all_opportunities;
+        if(verifiedData.length||allOppsData.length)applyFilters();
+        if(d.funding&&d.funding.length){
+            fundingData=d.funding;
+            renderFunding(fundingData);
+        }
+        if(d.funding_stats&&d.funding_stats.total){
+            document.getElementById('fBestDaily').textContent='$'+d.funding_stats.best_daily;
+            document.getElementById('fBestCoin').textContent=d.funding_stats.best_coin;
+            document.getElementById('fBestAnnual').textContent=d.funding_stats.best_annual+'%';
+            document.getElementById('fTotal').textContent=d.funding_stats.total;
+        }
+    }catch(e){}
+}
+setInterval(poll,2000);poll();
+</script>
+</body>
+</html>
