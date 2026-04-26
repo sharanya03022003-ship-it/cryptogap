@@ -607,17 +607,98 @@ def scan_thread():
     loop.run_until_complete(run_scan())
 
 
+ACCESS_KEYS = {
+    'demo2026',
+    'cryptogap_pro_001',
+}
+
+LOGIN_PAGE = '''
+<!DOCTYPE html><html><head><title>CryptoGap</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'SF Mono',monospace;background:#0a0a0f;color:#e0e0e0;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.box{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:40px;text-align:center;max-width:400px;width:90%}
+h1{color:#58a6ff;margin-bottom:8px;font-size:1.5rem}h1 span{color:#f0883e}
+p{color:#8b949e;margin-bottom:24px;font-size:0.85rem}
+input{width:100%;padding:12px;background:#0d1117;border:1px solid #21262d;color:#e0e0e0;border-radius:6px;font-family:inherit;font-size:0.9rem;margin-bottom:12px}
+input:focus{border-color:#58a6ff;outline:none}
+button{width:100%;padding:12px;background:linear-gradient(135deg,#238636,#2ea043);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-size:0.9rem;font-weight:600}
+button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(46,160,67,0.4)}
+.err{color:#f85149;font-size:0.8rem;margin-top:8px;display:none}
+.features{text-align:left;margin:20px 0;padding:16px;background:#0d1117;border-radius:8px;font-size:0.78rem;color:#8b949e;line-height:1.8}
+.features b{color:#e0e0e0}
+</style></head><body>
+<div class="box">
+<h1>Crypto<span>Gap</span></h1>
+<p>Real-time arbitrage intelligence across 80+ exchanges</p>
+<div class="features">
+<b>What you get:</b><br>
+- Spot arbitrage scanner (CoinGecko verified)<br>
+- Funding rate arbitrage scanner<br>
+- 22 trusted exchanges only<br>
+- Direct trade links<br>
+- Network & fee info<br>
+</div>
+<form method="POST" action="/login">
+<input type="text" name="key" placeholder="Enter access key" required>
+<button type="submit">Access Dashboard</button>
+</form>
+<p class="err" id="err">Invalid key</p>
+<p style="margin-top:16px;font-size:0.75rem">Get your key at <b>gumroad.com</b></p>
+</div>
+<script>if(location.search.includes('err'))document.getElementById('err').style.display='block'</script>
+</body></html>
+'''
+
+from functools import wraps
+from flask import request, session, redirect, url_for
+
+app.secret_key = 'cryptogap_secret_2026'
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('authenticated'):
+            return redirect(url_for('login_page'))
+        return f(*args, **kwargs)
+    return decorated
+
+
 @app.route('/')
+@login_required
 def index():
     return render_template_string(DASHBOARD_HTML)
 
 
+@app.route('/login', methods=['GET'])
+def login_page():
+    if session.get('authenticated'):
+        return redirect(url_for('index'))
+    return LOGIN_PAGE
+
+
+@app.route('/login', methods=['POST'])
+def login_submit():
+    key = request.form.get('key', '').strip()
+    if key in ACCESS_KEYS:
+        session['authenticated'] = True
+        return redirect(url_for('index'))
+    return redirect('/login?err=1')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('authenticated', None)
+    return redirect(url_for('login_page'))
+
+
 @app.route('/api/data')
+@login_required
 def api_data():
     return jsonify(scan_data)
 
 
 @app.route('/api/scan', methods=['POST'])
+@login_required
 def api_scan():
     if scan_data['scanning']:
         return jsonify({'status': 'already scanning'})
